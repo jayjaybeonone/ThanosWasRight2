@@ -74,10 +74,27 @@ Statuses:
 
 Changing a status does not email the customer yet.
 
-## Deploying
+## Deploying to Fly.io
 
-Any host that runs Node 22.13+ and keeps a writable disk will work (for example a VPS,
-Render, or Railway). Set `DB_PATH` to a persistent disk location, or the bookings are lost
-on each deploy. Put the server behind HTTPS before taking real customer details.
+The app runs in one container with a 1 GB volume for the database. Run these commands from the repo root.
+You need a Fly.io account and the `flyctl` CLI (`brew install flyctl` on macOS).
+
+```bash
+fly auth login
+fly launch --no-deploy --copy-config --name <your-app-name>   # uses fly.toml; change the name if it's taken
+fly volumes create atelier_data --size 1 --region iad         # region must match primary_region in fly.toml
+fly secrets set ADMIN_TOKEN="$(openssl rand -hex 32)"      # owner dashboard password; save it somewhere safe
+# Optional, for confirmation emails:
+fly secrets set RESEND_API_KEY=re_xxx EMAIL_FROM="The Wig Atelier <bookings@yourdomain.com>"
+fly deploy
+```
+
+Then open `https://<your-app-name>.fly.dev` for the site and `/owner` for the dashboard.
+
+Notes:
+- Keep exactly one machine. SQLite allows one writer, and the volume belongs to one machine.
+- Data lives on the `atelier_data` volume. Deleting the app deletes the volume, so back it up before taking it down.
+- Fly.io provisions HTTPS for `*.fly.dev` automatically. Use a custom domain before taking real customer details.
+- The Dockerfile at the repo root builds the image. Node needs no packages to install.
 
 Payments and automatic status emails are not implemented yet.
