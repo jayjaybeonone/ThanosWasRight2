@@ -38,9 +38,23 @@
 
   function validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
 
+  // Marks a field valid/invalid. An invalid field gets focus so keyboard and
+  // screen-reader users land on it; its error text is linked via aria-describedby.
   function fieldError(input, ok) {
     input.setAttribute("aria-invalid", ok ? "false" : "true");
+    if (!ok) input.focus();
     return ok;
+  }
+
+  function clearInvalid(form) {
+    form.querySelectorAll("[aria-invalid]").forEach(function (el) { el.removeAttribute("aria-invalid"); });
+  }
+
+  // Shows a confirmation inside the form (instead of a pop-up alert) and moves focus to it.
+  function showSuccess(id, message) {
+    var box = $(id);
+    box.textContent = message;
+    box.focus();
   }
 
   function findItem(id) {
@@ -50,7 +64,10 @@
   // ----- Catalog -----
   function renderCatalog() {
     var grid = $("catalog");
+    var focusedId = document.activeElement && grid.contains(document.activeElement)
+      ? document.activeElement.getAttribute("data-id") : null;
     grid.innerHTML = "";
+    grid.removeAttribute("aria-busy");
     CATALOG.items.forEach(function (item) {
       var card = document.createElement("article");
       card.className = "card item" + (item.id === selectedItem ? " selected" : "");
@@ -60,6 +77,7 @@
       tag.textContent = item.type;
 
       var h = document.createElement("h3");
+      h.id = "item-" + item.id;
       h.textContent = item.name;
 
       var p = document.createElement("p");
@@ -74,7 +92,10 @@
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "btn btn-ghost btn-small";
-      btn.textContent = item.id === selectedItem ? "Selected" : "Select";
+      var isSelected = item.id === selectedItem;
+      btn.textContent = isSelected ? "\u2713 Selected" : "Select";
+      btn.setAttribute("aria-pressed", String(isSelected));
+      btn.setAttribute("aria-label", (isSelected ? "Selected: " : "Select ") + item.name);
       btn.setAttribute("data-id", item.id);
 
       meta.appendChild(price);
@@ -84,11 +105,13 @@
       card.appendChild(p);
       card.appendChild(meta);
       grid.appendChild(card);
+      if (focusedId === item.id) btn.focus();   // keep keyboard focus after re-rendering
     });
   }
 
   $("catalog").addEventListener("click", function (e) {
-    var id = e.target && e.target.getAttribute("data-id");
+    var target = e.target && e.target.closest ? e.target.closest("[data-id]") : e.target;
+    var id = target && target.getAttribute("data-id");
     if (!id) return;
     selectedItem = id;
     $("b-item").value = id;
@@ -177,6 +200,8 @@
     var name = $("b-name").value.trim();
     var email = $("b-email").value.trim();
     var b = bookingInputs();
+    clearInvalid($("booking-form"));
+    $("b-success").textContent = "";
 
     if (!fieldError($("b-start"), !!b.start)) { err.textContent = "Choose a start date."; return; }
     if (!fieldError($("b-name"), name.length > 0)) { err.textContent = "Enter your name."; return; }
@@ -194,7 +219,7 @@
       $("booking-form").reset();
       $("b-item").value = selectedItem;
       updateSummary();
-      alert("Booking request " + data.ref + " received for " + formatIso(data.start) + " – " + formatIso(data.end) + "." +
+      showSuccess("b-success", "Booking request " + data.ref + " received for " + formatIso(data.start) + " – " + formatIso(data.end) + "." +
         (data.emailed ? " A confirmation was sent to " + email + "." : " We will email " + email + " to confirm."));
     }).catch(function (error) {
       err.textContent = error.message;
@@ -223,6 +248,8 @@
     var name = $("l-name").value.trim();
     var email = $("l-email").value.trim();
     var units = parseInt($("l-units").value, 10);
+    clearInvalid($("locker-form"));
+    $("l-success").textContent = "";
     if (!fieldError($("l-units"), units >= 1 && units <= CATALOG.rules.maxUnits)) { err.textContent = "Units must be between 1 and " + CATALOG.rules.maxUnits + "."; return; }
     if (!fieldError($("l-name"), name.length > 0)) { err.textContent = "Enter your name."; return; }
     if (!fieldError($("l-email"), validEmail(email))) { err.textContent = "Enter a valid email address."; return; }
@@ -237,7 +264,7 @@
       $("l-units").value = 2;
       $("l-plan").value = "29";
       updateLocker();
-      alert("Locker reservation received for " + money(data.monthly) + " / month." +
+      showSuccess("l-success", "Locker reservation received for " + money(data.monthly) + " / month." +
         (data.emailed ? " A confirmation was sent to " + email + "." : " We will email " + email + " with your intake instructions."));
     }).catch(function (error) {
       err.textContent = error.message;
@@ -265,6 +292,8 @@
     var owner = $("c-owner").value.trim();
     var email = $("c-email").value.trim();
     var price = parseFloat($("c-price").value);
+    clearInvalid($("consign-form"));
+    $("c-success").textContent = "";
     if (!fieldError($("c-name"), itemName.length > 0)) { err.textContent = "Enter the item name."; return; }
     if (!fieldError($("c-price"), price > 0)) { err.textContent = "Enter an asking price above zero."; return; }
     if (!fieldError($("c-owner"), owner.length > 0)) { err.textContent = "Enter your name."; return; }
@@ -289,7 +318,7 @@
       $("c-rate").value = "30";
       $("c-condition").selectedIndex = 1;
       updateConsign();
-      alert("Thanks! Reference " + data.ref + " received for " + itemName + "." +
+      showSuccess("c-success", "Thanks! Reference " + data.ref + " received for " + itemName + "." +
         (data.emailed ? " A confirmation was sent to " + email + "." : " We will email " + email + " with shipping instructions."));
     }).catch(function (error) {
       err.textContent = error.message;
@@ -308,6 +337,7 @@
     updateSummary();
     updateLocker();
   }).catch(function (error) {
+    $("catalog").removeAttribute("aria-busy");
     $("catalog").textContent = error.message;
     $("s-window").textContent = error.message;
     $("s-window").className = "window bad";

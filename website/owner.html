@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="owner">
+<a class="skip-link" href="#main">Skip to main content</a>
 
 <header class="site-header">
   <a class="brand" href="/owner">Owner <span>dashboard</span></a>
@@ -17,15 +18,15 @@
   </nav>
 </header>
 
-<main class="owner-main">
+<main class="owner-main" id="main" tabindex="-1">
 
   <!-- Sign-in -->
-  <section id="login" class="section owner-login" hidden>
-    <form id="login-form" class="card form" novalidate>
-      <h2>Sign in</h2>
-      <p class="muted">Enter the owner token configured on the server (<code>ADMIN_TOKEN</code>).</p>
-      <label>Owner token
-        <input type="password" id="token" autocomplete="current-password" required>
+  <section id="login" class="section owner-login" aria-labelledby="login-title" hidden>
+    <form id="login-form" class="card form" novalidate aria-labelledby="login-title">
+      <h1 id="login-title">Sign in</h1>
+      <p class="muted" id="token-help">Enter the owner token configured on the server (<code>ADMIN_TOKEN</code>).</p>
+      <label for="token"><span>Owner token <span class="req">(required)</span></span>
+        <input type="password" id="token" autocomplete="current-password" required aria-describedby="token-help login-error">
       </label>
       <p class="form-error" id="login-error" role="alert"></p>
       <button class="btn btn-primary" type="submit">Sign in</button>
@@ -33,34 +34,41 @@
   </section>
 
   <!-- Dashboard -->
-  <section id="dashboard" hidden>
+  <section id="dashboard" aria-labelledby="dash-title" hidden>
     <div class="section-head">
-      <h2>Today at a glance</h2>
-      <p class="muted" id="updated">Loading…</p>
+      <h1 id="dash-title">Today at a glance</h1>
+      <p class="muted" id="updated" role="status">Loading…</p>
     </div>
 
-    <div class="stat-grid" id="stats" aria-live="polite"></div>
+    <h2 class="visually-hidden">Key numbers</h2>
+    <div class="stat-grid" id="stats"></div>
 
-    <div class="tabs" role="tablist">
-      <button type="button" role="tab" class="tab is-active" data-tab="bookings" aria-selected="true">Rentals</button>
-      <button type="button" role="tab" class="tab" data-tab="locker" aria-selected="false">Wig Locker</button>
-      <button type="button" role="tab" class="tab" data-tab="consignments" aria-selected="false">Consignments</button>
+    <h2 class="visually-hidden">Records</h2>
+    <div class="tabs-bar">
+      <div class="tabs" role="tablist" aria-label="Record type">
+        <button type="button" role="tab" class="tab is-active" id="tab-bookings" data-tab="bookings" aria-selected="true" aria-controls="records-panel">Rentals</button>
+        <button type="button" role="tab" class="tab" id="tab-locker" data-tab="locker" aria-selected="false" aria-controls="records-panel" tabindex="-1">Wig Locker</button>
+        <button type="button" role="tab" class="tab" id="tab-consignments" data-tab="consignments" aria-selected="false" aria-controls="records-panel" tabindex="-1">Consignments</button>
+      </div>
       <button type="button" class="btn btn-ghost btn-small refresh" id="refresh">Refresh</button>
     </div>
 
+    <div id="records-panel" role="tabpanel" aria-labelledby="tab-bookings">
     <div class="filter">
-      <label>Status
+      <label for="status-filter">Filter by status
         <select id="status-filter"></select>
       </label>
-      <p class="muted" id="count"></p>
+      <p class="muted" id="count" role="status"></p>
     </div>
 
     <p class="form-error" id="table-error" role="alert"></p>
-    <div class="table-wrap">
+    <div class="table-wrap" role="region" aria-labelledby="table-caption" tabindex="0">
       <table class="owner-table">
+        <caption id="table-caption" class="visually-hidden">Rentals</caption>
         <thead id="table-head"></thead>
         <tbody id="table-body"></tbody>
       </table>
+    </div>
     </div>
   </section>
 

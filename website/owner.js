@@ -51,13 +51,20 @@
     showView("login");
     $("login-error").textContent = message || "";
     $("token").value = "";
+    $("token").setAttribute("aria-invalid", message ? "true" : "false");
   }
 
   // ----- Sign in -----
   $("login-form").addEventListener("submit", function (e) {
     e.preventDefault();
     var token = $("token").value.trim();
-    if (!token) { $("login-error").textContent = "Enter the owner token."; return; }
+    if (!token) {
+      $("login-error").textContent = "Enter the owner token.";
+      $("token").setAttribute("aria-invalid", "true");
+      $("token").focus();
+      return;
+    }
+    $("token").setAttribute("aria-invalid", "false");
     state.token = token;
     $("login-error").textContent = "";
     load(true);
@@ -143,6 +150,8 @@
   function renderTable() {
     var tab = state.tab;
     var cols = COLUMNS[tab];
+    var activeTab = document.querySelector('.tab[data-tab="' + tab + '"]');
+    $("table-caption").textContent = (activeTab ? activeTab.textContent : tab) + " records";
     var filter = $("status-filter").value;
     var rows = state.records.filter(function (r) { return !filter || r.status === filter; });
 
@@ -153,6 +162,7 @@
     var tr = document.createElement("tr");
     cols.forEach(function (c) {
       var th = document.createElement("th");
+      th.scope = "col";
       th.textContent = c.title;
       tr.appendChild(th);
     });
@@ -199,7 +209,7 @@
     var wrap = document.createElement("div");
     wrap.className = "status-cell";
     var select = document.createElement("select");
-    select.setAttribute("aria-label", "Status");
+    select.setAttribute("aria-label", "Status for " + (row.ref || ("#" + row.id)) + (row.name || row.owner ? ", " + (row.name || row.owner) : ""));
     STATUS_OPTIONS[tab].forEach(function (s) {
       var opt = document.createElement("option");
       opt.value = s;
@@ -209,6 +219,7 @@
     });
     var note = document.createElement("span");
     note.className = "small muted";
+    note.setAttribute("role", "status");
     select.addEventListener("change", function () {
       var newStatus = select.value;
       var key = row[KEY_FIELD[tab]];
@@ -273,6 +284,8 @@
       if (state.token === null) return;   // signed out by a 401; the message is already shown
       if (fromSignIn) {
         $("login-error").textContent = err.message;
+        $("token").setAttribute("aria-invalid", "true");
+        $("token").focus();
         return;
       }
       $("table-error").textContent = err.message;
@@ -280,16 +293,30 @@
   }
 
   // ----- Tabs and filters -----
-  document.querySelectorAll(".tab").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      state.tab = btn.getAttribute("data-tab");
-      document.querySelectorAll(".tab").forEach(function (b) {
-        var active = b === btn;
-        b.classList.toggle("is-active", active);
-        b.setAttribute("aria-selected", String(active));
-      });
-      setupFilter(state.tab);
-      loadTable();
+  // Tabs follow the WAI-ARIA pattern: Tab moves into the active tab, arrow keys / Home / End switch tabs.
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
+  function selectTab(btn, moveFocus) {
+    state.tab = btn.getAttribute("data-tab");
+    tabs.forEach(function (b) {
+      var active = b === btn;
+      b.classList.toggle("is-active", active);
+      b.setAttribute("aria-selected", String(active));
+      b.tabIndex = active ? 0 : -1;
+    });
+    $("records-panel").setAttribute("aria-labelledby", btn.id);
+    if (moveFocus) btn.focus();
+    setupFilter(state.tab);
+    loadTable();
+  }
+  tabs.forEach(function (btn, i) {
+    btn.addEventListener("click", function () { selectTab(btn, false); });
+    btn.addEventListener("keydown", function (e) {
+      var next = null;
+      if (e.key === "ArrowRight") next = tabs[(i + 1) % tabs.length];
+      else if (e.key === "ArrowLeft") next = tabs[(i - 1 + tabs.length) % tabs.length];
+      else if (e.key === "Home") next = tabs[0];
+      else if (e.key === "End") next = tabs[tabs.length - 1];
+      if (next) { e.preventDefault(); selectTab(next, true); }
     });
   });
 
