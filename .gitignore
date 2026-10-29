@@ -27,3 +27,6 @@ private/
 
 # Session templates (not committed)
 examples/sessions/*.tmp
+
+# Server runtime data
+server/data/
