@@ -15,6 +15,7 @@ No `npm install` is needed. It uses only Node built-ins.
 cd server
 npm start              # http://localhost:3000
 PORT=8080 npm start    # use another port
+ADMIN_TOKEN=$(openssl rand -hex 32) npm start   # enables the owner dashboard
 npm test               # run the API tests
 ```
 
@@ -26,6 +27,7 @@ npm test               # run the API tests
 | `DB_PATH`        | `server/data/atelier.db`    | Where the SQLite database is stored                        |
 | `RESEND_API_KEY` | unset                       | Enables confirmation emails through [Resend](https://resend.com) |
 | `EMAIL_FROM`     | unset                       | Sender address, e.g. `Atelier <bookings@yourdomain.com>` (the domain must be verified in Resend) |
+| `ADMIN_TOKEN`    | unset                       | Password for the owner dashboard at `/owner`. Unset means the dashboard is turned off. Use at least 32 random characters. |
 
 Without `RESEND_API_KEY` and `EMAIL_FROM`, the server logs the emails it would have sent
 and everything else works.
@@ -52,10 +54,30 @@ and the server recalculates every total, so the browser can't change a price.
 
 Errors return `{ "error": "message" }` with a 400, 404, 409, or 413 status.
 
+## Owner dashboard
+
+Open `/owner` and sign in with `ADMIN_TOKEN`. The dashboard shows:
+
+- **Summary:** upcoming rentals, rental revenue, open security holds, active locker units and monthly recurring revenue, and consignments in store and sold.
+- **Rentals, Wig Locker, and Consignments tabs:** every record, with a status filter.
+- **Status changes:** each record has a status dropdown that saves when changed. Setting a booking to `cancelled` frees its dates.
+
+The token is kept in `sessionStorage`, so it's forgotten when the browser tab closes. Owner routes return 401 for a wrong token and 503 when `ADMIN_TOKEN` is unset. Keep the token secret: anyone who has it can read every customer's name, email, and booking.
+
+Statuses:
+
+| Records      | Statuses                                              |
+|--------------|-------------------------------------------------------|
+| Rentals      | pending, confirmed, out, returned, cancelled          |
+| Locker       | pending, active, ended                                |
+| Consignments | received, listed, sold, paid_out, returned            |
+
+Changing a status does not email the customer yet.
+
 ## Deploying
 
 Any host that runs Node 22.13+ and keeps a writable disk will work (for example a VPS,
 Render, or Railway). Set `DB_PATH` to a persistent disk location, or the bookings are lost
 on each deploy. Put the server behind HTTPS before taking real customer details.
 
-Payments, holds, and the owner dashboard are not implemented yet.
+Payments and automatic status emails are not implemented yet.

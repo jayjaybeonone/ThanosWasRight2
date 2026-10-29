@@ -205,3 +205,147 @@ test("oversized request bodies are rejected", async () => {
     await s.close();
   }
 });
+
+// ----- Owner dashboard -----
+
+const TOKEN = "test-owner-token-with-enough-length-123";
+
+async function startAdmin(token = TOKEN) {
+  const db = openDatabase(":memory:");
+  const { server } = createApp({ db, adminToken: token });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  return { base, db, close: () => new Promise((resolve) => { server.close(resolve); db.close(); }) };
+}
+
+function admin(base, path, options = {}, token = TOKEN) {
+  return fetch(base + path, {
+    ...options,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(options.headers || {}) },
+  });
+}
+
+test("owner routes are disabled when ADMIN_TOKEN is not set", async () => {
+  const s = await startAdmin("");
+  try {
+    const res = await fetch(s.base + "/api/admin/summary", { headers: { Authorization: "Bearer anything" } });
+    assert.equal(res.status, 503);
+  } finally {
+    await s.close();
+  }
+});
+
+test("owner routes reject missing and wrong tokens", async () => {
+  const s = await startAdmin();
+  try {
+    const none = await fetch(s.base + "/api/admin/summary");
+    assert.equal(none.status, 401);
+    const wrong = await admin(s.base, "/api/admin/summary", {}, "wrong-token");
+    assert.equal(wrong.status, 401);
+    const ok = await admin(s.base, "/api/admin/summary");
+    assert.equal(ok.status, 200);
+  } finally {
+    await s.close();
+  }
+});
+
+test("owner can list records with item names and readable dates", async () => {
+  const s = await startAdmin();
+  try {
+    await post(s.base, "/api/bookings", { item: "bob-synth", start: isoDaysFromToday(3), blocks: 1, name: "Ada", email: "ada@example.com" });
+    const res = await admin(s.base, "/api/admin/bookings");
+    const data = await res.json();
+    assert.equal(data.records.length, 1);
+    const b = data.records[0];
+    assert.equal(b.itemName, "Heat-Resistant Synthetic Bob");
+    assert.equal(b.status, "pending");
+    assert.match(b.start, /^\d{4}-\d{2}-\d{2}$/);
+    assert.equal(b.start, isoDaysFromToday(3));
+    assert.equal(b.end, isoDaysFromToday(6));
+  } finally {
+    await s.close();
+  }
+});
+
+test("owner can confirm, return, and cancel a booking", async () => {
+  const s = await startAdmin();
+  try {
+    const created = await post(s.base, "/api/bookings", { item: "bob-synth", start: isoDaysFromToday(3), blocks: 1, name: "Ada", email: "ada@example.com" });
+    const ref = created.data.ref;
+
+    const confirm = await admin(s.base, `/api/admin/bookings/${ref}`, { method: "PATCH", body: JSON.stringify({ status: "confirmed" }) });
+    assert.equal(confirm.status, 200);
+
+    const bad = await admin(s.base, `/api/admin/bookings/${ref}`, { method: "PATCH", body: JSON.stringify({ status: "shipped" }) });
+    assert.equal(bad.status, 400);
+
+    const missing = await admin(s.base, `/api/admin/bookings/BK-NOPE0000`, { method: "PATCH", body: JSON.stringify({ status: "confirmed" }) });
+    assert.equal(missing.status, 404);
+  } finally {
+    await s.close();
+  }
+});
+
+test("cancelled bookings free the slot for new customers", async () => {
+  const s = await startAdmin();
+  try {
+    const created = await post(s.base, "/api/bookings", { item: "bob-synth", start: isoDaysFromToday(3), blocks: 1, name: "Ada", email: "ada@example.com" });
+    const blocked = await post(s.base, "/api/bookings", { item: "bob-synth", start: isoDaysFromToday(4), blocks: 1, name: "Bo", email: "bo@example.com" });
+    assert.equal(blocked.status, 409);
+
+    await admin(s.base, `/api/admin/bookings/${created.data.ref}`, { method: "PATCH", body: JSON.stringify({ status: "cancelled" }) });
+
+    const freed = await post(s.base, "/api/bookings", { item: "bob-synth", start: isoDaysFromToday(4), blocks: 1, name: "Bo", email: "bo@example.com" });
+    assert.equal(freed.status, 201);
+  } finally {
+    await s.close();
+  }
+});
+
+test("owner can update locker and consignment status and see the summary", async () => {
+  const s = await startAdmin();
+  try {
+    await post(s.base, "/api/locker", { units: 2, plan: 29, name: "Ada", email: "ada@example.com" });
+    const lockerList = await (await admin(s.base, "/api/admin/locker")).json();
+    const lockerId = lockerList.records[0].id;
+
+    const activate = await admin(s.base, `/api/admin/locker/${lockerId}`, { method: "PATCH", body: JSON.stringify({ status: "active" }) });
+    assert.equal(activate.status, 200);
+
+    const consign = await post(s.base, "/api/consign", {
+      item: "Chestnut", type: "Human hair", condition: "Excellent", price: 500, rate: 30, owner: "Ada", email: "ada@example.com",
+    });
+    await admin(s.base, `/api/admin/consignments/${consign.data.ref}`, { method: "PATCH", body: JSON.stringify({ status: "sold" }) });
+
+    const summary = await (await admin(s.base, "/api/admin/summary")).json();
+    assert.equal(summary.locker.activeUnits, 2);
+    assert.equal(summary.locker.monthlyRecurring, 58);
+    assert.equal(summary.consignments.sold, 1);
+    assert.equal(summary.consignments.total, 1);
+  } finally {
+    await s.close();
+  }
+});
+
+test("owner page is served at /owner", async () => {
+  const s = await startAdmin();
+  try {
+    const res = await fetch(s.base + "/owner");
+    assert.equal(res.status, 200);
+    assert.match(await res.text(), /Owner dashboard/);
+  } finally {
+    await s.close();
+  }
+});
+
+test("summary returns zeros, not nulls, on an empty database", async () => {
+  const s = await startAdmin();
+  try {
+    const summary = await (await admin(s.base, "/api/admin/summary")).json();
+    assert.deepEqual(summary.bookings, { total: 0, pending: 0, upcoming: 0, revenue: 0, holdsOpen: 0 });
+    assert.deepEqual(summary.locker, { activeUnits: 0, monthlyRecurring: 0, pending: 0 });
+    assert.deepEqual(summary.consignments, { total: 0, inStore: 0, sold: 0 });
+  } finally {
+    await s.close();
+  }
+});

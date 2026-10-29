@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Owner dashboard · The Wig Atelier &amp; Vault</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="owner">
+
+<header class="site-header">
+  <a class="brand" href="/owner">Owner <span>dashboard</span></a>
+  <nav class="site-nav" aria-label="Owner">
+    <a href="/">View site</a>
+    <button type="button" class="btn btn-ghost btn-small" id="sign-out" hidden>Sign out</button>
+  </nav>
+</header>
+
+<main class="owner-main">
+
+  <!-- Sign-in -->
+  <section id="login" class="section owner-login" hidden>
+    <form id="login-form" class="card form" novalidate>
+      <h2>Sign in</h2>
+      <p class="muted">Enter the owner token configured on the server (<code>ADMIN_TOKEN</code>).</p>
+      <label>Owner token
+        <input type="password" id="token" autocomplete="current-password" required>
+      </label>
+      <p class="form-error" id="login-error" role="alert"></p>
+      <button class="btn btn-primary" type="submit">Sign in</button>
+    </form>
+  </section>
+
+  <!-- Dashboard -->
+  <section id="dashboard" hidden>
+    <div class="section-head">
+      <h2>Today at a glance</h2>
+      <p class="muted" id="updated">Loading…</p>
+    </div>
+
+    <div class="stat-grid" id="stats" aria-live="polite"></div>
+
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" class="tab is-active" data-tab="bookings" aria-selected="true">Rentals</button>
+      <button type="button" role="tab" class="tab" data-tab="locker" aria-selected="false">Wig Locker</button>
+      <button type="button" role="tab" class="tab" data-tab="consignments" aria-selected="false">Consignments</button>
+      <button type="button" class="btn btn-ghost btn-small refresh" id="refresh">Refresh</button>
+    </div>
+
+    <div class="filter">
+      <label>Status
+        <select id="status-filter"></select>
+      </label>
+      <p class="muted" id="count"></p>
+    </div>
+
+    <p class="form-error" id="table-error" role="alert"></p>
+    <div class="table-wrap">
+      <table class="owner-table">
+        <thead id="table-head"></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script src="owner.js"></script>
+</body>
+</html>

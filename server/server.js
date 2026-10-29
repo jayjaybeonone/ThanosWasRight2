@@ -168,7 +168,8 @@ function readJson(req) {
 }
 
 function serveStatic(req, res, pathname) {
-  const requested = pathname === "/" ? "/index.html" : pathname;
+  const pages = { "/": "/index.html", "/owner": "/owner.html" };
+  const requested = pages[pathname] || pathname;
   const file = path.normalize(path.join(WEBSITE_DIR, requested));
   // Block path traversal: the resolved path must stay inside the website folder.
   if (!file.startsWith(WEBSITE_DIR + path.sep)) {
@@ -189,10 +190,87 @@ function formatMoney(n) {
   return `$${n.toLocaleString("en-US")}`;
 }
 
+// Compares two strings in constant time. Hashing first makes the lengths match.
+function tokensMatch(given, expected) {
+  const a = crypto.createHash("sha256").update(String(given)).digest();
+  const b = crypto.createHash("sha256").update(String(expected)).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+function isAuthorized(req, token) {
+  if (!token) return false;
+  const header = req.headers.authorization || "";
+  const given = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  return given.length > 0 && tokensMatch(given, token);
+}
+
+// Routes under /api/admin/. Everything here requires the owner token.
+async function handleAdmin(req, res, url, db, token) {
+  if (!token) {
+    return sendJson(res, 503, { error: "The owner dashboard is turned off. Set ADMIN_TOKEN on the server to enable it." });
+  }
+  if (!isAuthorized(req, token)) {
+    return sendJson(res, 401, { error: "Wrong or missing owner token." });
+  }
+
+  const parts = url.pathname.split("/").filter(Boolean); // ["api", "admin", resource, key?]
+  const resource = parts[2];
+  const key = parts[3];
+
+  if (req.method === "GET" && resource === "summary" && !key) {
+    return sendJson(res, 200, db.summary(todayDay()));
+  }
+  if (req.method === "GET" && resource === "bookings" && !key) {
+    const records = db.listBookings().map((b) => ({
+      ...b,
+      itemName: (ITEMS.find((i) => i.id === b.item) || { name: b.item }).name,
+      start: dayToIso(b.start_day),
+      end: dayToIso(b.end_day),
+    }));
+    return sendJson(res, 200, { records });
+  }
+  if (req.method === "GET" && resource === "locker" && !key) {
+    return sendJson(res, 200, { records: db.listLocker() });
+  }
+  if (req.method === "GET" && resource === "consignments" && !key) {
+    return sendJson(res, 200, { records: db.listConsignments() });
+  }
+
+  // Status changes: PATCH /api/admin/<resource>/<key> with { "status": "..." }
+  const tables = {
+    bookings: { table: "bookings", column: "ref" },
+    locker: { table: "locker_reservations", column: "id" },
+    consignments: { table: "consignments", column: "ref" },
+  };
+  if (req.method === "PATCH" && tables[resource] && key) {
+    const body = await readJson(req);
+    const { table, column } = tables[resource];
+    const keyValue = column === "id" ? Number(key) : key;
+    if (column === "id" && !Number.isInteger(keyValue)) {
+      return sendJson(res, 400, { error: "Invalid id." });
+    }
+    try {
+      const updated = db.setStatus(table, keyValue, column, String(body.status || ""));
+      if (!updated) return sendJson(res, 404, { error: "Record not found." });
+      return sendJson(res, 200, { ok: true, status: body.status });
+    } catch (err) {
+      if (err.status === 400) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  }
+
+  return sendJson(res, 404, { error: "Not found." });
+}
+
 function createApp(options = {}) {
   const db = options.db || openDatabase(options.dbPath);
+  const adminToken = options.adminToken !== undefined ? options.adminToken : process.env.ADMIN_TOKEN;
 
   async function handleApi(req, res, url) {
+    if (url.pathname.startsWith("/api/admin/")) {
+      return handleAdmin(req, res, url, db, adminToken);
+    }
+
     if (req.method === "GET" && url.pathname === "/api/catalog") {
       return sendJson(res, 200, {
         items: ITEMS,
