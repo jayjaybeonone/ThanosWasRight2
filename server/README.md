@@ -76,6 +76,18 @@ Changing a status does not email the customer yet.
 
 ## Deploying to Fly.io
 
+The easiest way is the script, run from your own computer (not this sandbox). It installs `flyctl` if needed, signs you in, and creates the app, volume, and owner token when missing before deploying. It is safe to run again:
+
+```bash
+./scripts/deploy-fly.sh
+# or with email:
+RESEND_API_KEY=re_xxx EMAIL_FROM="The Wig Atelier <bookings@yourdomain.com>" ./scripts/deploy-fly.sh
+```
+
+The owner token is saved to `~/.config/wig-atelier/owner-token`. The manual steps below do the same thing.
+
+### Manual steps
+
 The app runs in one container with a 1 GB volume for the database. Run these commands from the repo root.
 You need a Fly.io account and the `flyctl` CLI (`brew install flyctl` on macOS).
 
