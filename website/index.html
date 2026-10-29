@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Wig Atelier &amp; Vault</title>
+  <meta name="description" content="Luxury wig rentals, climate-controlled Wig Locker storage, and consignment, with hospital-grade sanitation between every wear.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand" href="#top">The Wig Atelier <span>&amp; Vault</span></a>
+  <nav class="site-nav" aria-label="Main">
+    <a href="#rentals">Rentals</a>
+    <a href="#locker">Wig Locker</a>
+    <a href="#consign">Consign</a>
+    <a href="#services">Services</a>
+    <a href="#policies">Policies</a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <section class="hero">
+    <p class="eyebrow">Rentals &middot; Storage &middot; Consignment</p>
+    <h1>Wear the look. Skip the $1,500 commitment.</h1>
+    <p class="lead">Rent premium human and synthetic wigs for 4-day blocks. Every unit is sanitized in three stages, inspected, and logged before its next wear. Store your collection in our climate-controlled Wig Locker, or consign pieces you no longer need.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#rentals">Browse rentals</a>
+      <a class="btn btn-ghost" href="#consign">Consign a wig</a>
+    </div>
+    <ul class="stats">
+      <li><strong>4 days</strong><span>turnaround buffer</span></li>
+      <li><strong>3-tier</strong><span>sanitation</span></li>
+      <li><strong>100%</strong><span>glueless rental caps</span></li>
+    </ul>
+  </section>
+
+  <!-- RENTALS -->
+  <section id="rentals" class="section">
+    <div class="section-head">
+      <h2>Short-term rentals</h2>
+      <p>Priced per 4-day block. Shipping, return label, and hygiene fee are included in your total. A refundable security hold is authorized on your card and released 48 hours after we inspect the unit.</p>
+    </div>
+
+    <div id="catalog" class="catalog" aria-live="polite"></div>
+
+    <div class="booking-grid">
+      <form id="booking-form" class="card form" novalidate>
+        <h3>Book a rental</h3>
+
+        <label>Wig
+          <select id="b-item" name="item" required></select>
+        </label>
+
+        <div class="row">
+          <label>Start date
+            <input type="date" id="b-start" name="start" required>
+          </label>
+          <label>4-day blocks
+            <select id="b-blocks" name="blocks">
+              <option value="1">1 block (4 days)</option>
+              <option value="2">2 blocks (8 days)</option>
+              <option value="3">3 blocks (12 days)</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row">
+          <label>Full name
+            <input type="text" id="b-name" name="name" autocomplete="name" required>
+          </label>
+          <label>Email
+            <input type="email" id="b-email" name="email" autocomplete="email" required>
+          </label>
+        </div>
+
+        <p class="form-error" id="b-error" role="alert"></p>
+        <button class="btn btn-primary" type="submit">Request booking</button>
+        <p class="fine">Demo site: bookings are saved in this browser only. Payment is not yet connected.</p>
+      </form>
+
+      <aside class="card summary" aria-live="polite">
+        <h3>Your estimate</h3>
+        <dl>
+          <dt>Rental</dt><dd id="s-rental">$0</dd>
+          <dt>Shipping &amp; hygiene</dt><dd id="s-fee">$0</dd>
+          <dt class="total"><span>Due today</span></dt><dd class="total" id="s-total">$0</dd>
+          <dt>Security hold (not charged)</dt><dd id="s-hold">$0</dd>
+        </dl>
+        <p class="window" id="s-window"></p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- WIG LOCKER -->
+  <section id="locker" class="section alt">
+    <div class="section-head">
+      <h2>The Wig Locker</h2>
+      <p>Climate-controlled, humidity-regulated vault storage for your personal collection. Each unit includes a monthly maintenance brush and a breathable dust cube. Request on-demand wash, detangle, restyle, or courier dispatch from your member dashboard.</p>
+    </div>
+
+    <div class="locker-grid">
+      <form id="locker-form" class="card form" novalidate>
+        <h3>Reserve locker units</h3>
+        <div class="row">
+          <label>Units
+            <input type="number" id="l-units" name="units" min="1" max="50" value="2" required>
+          </label>
+          <label>Plan
+            <select id="l-plan" name="plan">
+              <option value="19">Essentials &mdash; $19 / unit / month</option>
+              <option value="29" selected>Standard &mdash; $29 / unit / month</option>
+              <option value="39">Premier &mdash; $39 / unit / month</option>
+            </select>
+          </label>
+        </div>
+        <div class="row">
+          <label>Full name
+            <input type="text" id="l-name" name="name" autocomplete="name" required>
+          </label>
+          <label>Email
+            <input type="email" id="l-email" name="email" autocomplete="email" required>
+          </label>
+        </div>
+        <p class="form-error" id="l-error" role="alert"></p>
+        <button class="btn btn-primary" type="submit">Reserve storage</button>
+      </form>
+
+      <aside class="card summary">
+        <h3>Monthly total</h3>
+        <p class="big" id="l-total">$0</p>
+        <p class="muted" id="l-note"></p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- CONSIGNMENT -->
+  <section id="consign" class="section">
+    <div class="section-head">
+      <h2>Consignment</h2>
+      <p>We authenticate origin, sanitize, photograph with a 360&deg; turntable video, and handle every sale and dispatch. Choose your commission rate to see what you keep.</p>
+    </div>
+
+    <div class="booking-grid">
+      <form id="consign-form" class="card form" novalidate>
+        <h3>Submit an item</h3>
+        <div class="row">
+          <label>Item name
+            <input type="text" id="c-name" name="item" required>
+          </label>
+          <label>Hair type
+            <select id="c-type" name="type">
+              <option>Human hair</option>
+              <option>Synthetic</option>
+              <option>Blend</option>
+            </select>
+          </label>
+        </div>
+        <div class="row">
+          <label>Condition
+            <select id="c-condition" name="condition">
+              <option>Like new (worn once or twice)</option>
+              <option selected>Excellent</option>
+              <option>Good (visible wear)</option>
+              <option>Fair (needs restyling)</option>
+            </select>
+          </label>
+          <label>Asking price ($)
+            <input type="number" id="c-price" name="price" min="1" step="1" value="400" required>
+          </label>
+        </div>
+        <label>Your commission
+          <select id="c-rate" name="rate">
+            <option value="20">20% (we sell faster; higher volume)</option>
+            <option value="25">25%</option>
+            <option value="30" selected>30% (standard)</option>
+            <option value="35">35% (premium, longer listing time)</option>
+          </select>
+        </label>
+        <div class="row">
+          <label>Full name
+            <input type="text" id="c-owner" name="owner" autocomplete="name" required>
+          </label>
+          <label>Email
+            <input type="email" id="c-email" name="email" autocomplete="email" required>
+          </label>
+        </div>
+        <p class="form-error" id="c-error" role="alert"></p>
+        <button class="btn btn-primary" type="submit">Submit for consignment</button>
+      </form>
+
+      <aside class="card summary">
+        <h3>Your payout</h3>
+        <dl>
+          <dt>Sale price</dt><dd id="c-sale">$0</dd>
+          <dt>Our commission</dt><dd id="c-fee">$0</dd>
+          <dt class="total"><span>You receive</span></dt><dd class="total" id="c-payout">$0</dd>
+        </dl>
+        <p class="fine">Payouts are issued after the item sells and the buyer's return window closes. The final valuation is set after our inspection.</p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section id="services" class="section alt">
+    <div class="section-head">
+      <h2>A la carte services</h2>
+      <p>Book any service on its own, or add it to a locker plan. Final pricing is confirmed after inspection.</p>
+    </div>
+    <div class="grid-3">
+      <article class="card"><h3>Lace repair</h3><p>Re-knotting and reinforcing lace panels.</p><p class="price">$45 &ndash; $150</p></article>
+      <article class="card"><h3>Knot bleaching</h3><p>Lightening knots for a natural-looking scalp line.</p><p class="price">$45 &ndash; $150</p></article>
+      <article class="card"><h3>Custom color tinting</h3><p>Color matching for rentals or your own pieces.</p><p class="price">$45 &ndash; $150</p></article>
+      <article class="card"><h3>Thermal restyling</h3><p>Heat-safe styling for synthetic fibers.</p><p class="price">$45 &ndash; $150</p></article>
+      <article class="card"><h3>Deep conditioning</h3><p>Restores moisture and softness after wear.</p><p class="price">$45 &ndash; $150</p></article>
+    </div>
+  </section>
+
+  <!-- POLICIES -->
+  <section id="policies" class="section">
+    <div class="section-head">
+      <h2>Policies</h2>
+      <p>We keep every unit to a strict standard so the next person gets a wig they can trust.</p>
+    </div>
+    <div class="grid-3">
+      <article class="card">
+        <h3>4-day turnaround buffer</h3>
+        <p>Every unit rests at least 4 days between bookings for receipt, inspection, sterilization, and hand-styling. Booking calendars enforce this automatically.</p>
+      </article>
+      <article class="card">
+        <h3>Security holds</h3>
+        <p>Holds of $150&ndash;$350 are authorized, not charged. They are released automatically 48 hours after inspection unless damage is found.</p>
+      </article>
+      <article class="card">
+        <h3>Damage schedule</h3>
+        <ul class="plain">
+          <li>Tangles or scents: <strong>$30</strong></li>
+          <li>Lace snags repaired in-house: <strong>$85</strong></li>
+          <li>Unauthorized lace cutting or adhesive use: <strong>full deposit forfeited</strong></li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>&copy; <span id="year"></span> The Wig Atelier &amp; Vault. All rights reserved.</p>
+  <p class="fine">Every wig is sanitized and inspected before its next wear.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
