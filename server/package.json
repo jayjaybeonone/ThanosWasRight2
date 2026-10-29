@@ -1,0 +1,14 @@
+{
+  "name": "wig-atelier-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Server for The Wig Atelier & Vault: serves the website and stores bookings, locker reservations, and consignments.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  }
+}
