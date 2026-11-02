@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "everything-claude-code": {
+      "source": {
+        "source": "github",
+        "repo": "jayjaybeonone/ThanosWasRight2"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "AI-plugin-core@everything-claude-code": true
+  }
+}

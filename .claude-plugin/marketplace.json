@@ -39,6 +39,23 @@
         "security",
         "best-practices"
       ]
+    },
+    {
+      "name": "AI-plugin-core",
+      "source": "./plugins/AI-plugin-core",
+      "description": "39 slash commands (standup, wrap, DCF valuation, portfolio risk, design critique, discovery calls and more) plus the ai-coding-agent-guardrails skill",
+      "version": "1.0.0",
+      "author": {
+        "name": "Nurtured-Goliath-2604"
+      },
+      "category": "productivity",
+      "tags": [
+        "commands",
+        "skills",
+        "guardrails",
+        "finance",
+        "design"
+      ]
     }
   ]
 }
