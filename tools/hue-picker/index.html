@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hue Color &amp; Dimmer Picker</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --text: #1d1d1f;
+    --muted: #6e6e73;
+    --border: #d2d2d7;
+    --accent: #0a84ff;
+    --danger: #ff3b30;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #000000;
+      --card: #1c1c1e;
+      --text: #f5f5f7;
+      --muted: #98989d;
+      --border: #38383a;
+      --accent: #0a84ff;
+      --danger: #ff453a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #000000;
+    --card: #1c1c1e;
+    --text: #f5f5f7;
+    --muted: #98989d;
+    --border: #38383a;
+    --accent: #0a84ff;
+    --danger: #ff453a;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 16px;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 720px) {
+    main { grid-template-columns: 1.1fr 1fr; }
+    .full { grid-column: 1 / -1; }
+  }
+  header { padding: 8px 0 0; }
+  h1 { font-size: 22px; margin: 0; }
+  .sub { color: var(--muted); margin: 4px 0 0; font-size: 13px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .card h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+
+  /* Color wheel */
+  .wheel-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .wheel-box { position: relative; width: min(100%, 320px); aspect-ratio: 1; }
+  canvas#wheel {
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: crosshair;
+    border-radius: 50%;
+  }
+  .swatch-preview {
+    width: 100%;
+    height: 44px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    transition: background-color .15s;
+  }
+
+  /* Dimmer */
+  .dimmer { display: flex; flex-direction: column; gap: 10px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .value { font-variant-numeric: tabular-nums; color: var(--muted); }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  #bri { height: 36px; }
+
+  /* Presets */
+  .presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 8px; }
+  .preset {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    padding: 0;
+  }
+  .preset:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Lights */
+  .lights { display: flex; flex-direction: column; gap: 8px; }
+  .light {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    cursor: pointer; background: transparent; color: var(--text); text-align: left; width: 100%;
+  }
+  .light[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border); flex: none; }
+  .light .meta { color: var(--muted); font-size: 12px; }
+  .light .name { flex: 1; }
+  .empty { color: var(--muted); font-size: 13px; }
+
+  /* Buttons + inputs */
+  button.btn {
+    font: inherit; padding: 9px 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer;
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.btn:disabled { opacity: .5; cursor: default; }
+  input.text {
+    font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); width: 100%;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+  .field label { font-size: 12px; color: var(--muted); }
+  .status { font-size: 13px; color: var(--muted); min-height: 1.4em; }
+  .status.error { color: var(--danger); }
+  .toggle-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .hint { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <header class="full">
+    <h1>Hue Color &amp; Dimmer Picker</h1>
+    <p class="sub" id="mode-label">Demo mode: no bridge connected, changes are simulated locally.</p>
+  </header>
+
+  <section class="card" aria-labelledby="color-h">
+    <h2 id="color-h">Color</h2>
+    <div class="wheel-wrap">
+      <div class="wheel-box">
+        <canvas id="wheel" width="640" height="640" role="img" aria-label="Color wheel. Drag to pick hue and saturation. Center is white."></canvas>
+      </div>
+      <div class="swatch-preview" id="preview" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="dim-h">
+    <h2 id="dim-h">Brightness</h2>
+    <div class="dimmer">
+      <div class="row">
+        <label for="bri">Dim</label>
+        <span class="value" id="bri-val">100%</span>
+      </div>
+      <input type="range" id="bri" min="1" max="100" value="100" aria-describedby="bri-val">
+      <div class="toggle-row">
+        <button class="btn" id="power-off" type="button">Off</button>
+        <button class="btn" id="power-on" type="button">On</button>
+      </div>
+    </div>
+
+    <h2 style="margin-top:20px">Presets</h2>
+    <div class="presets" id="presets" role="group" aria-label="Color presets"></div>
+  </section>
+
+  <section class="card full" aria-labelledby="lights-h">
+    <h2 id="lights-h">Lights</h2>
+    <div class="lights" id="lights" role="group" aria-label="Lights"></div>
+    <p class="hint">Click lights to toggle them as targets. With none selected, changes go to all lights.</p>
+  </section>
+
+  <section class="card full" aria-labelledby="bridge-h">
+    <h2 id="bridge-h">Bridge</h2>
+    <div class="field">
+      <label for="ip">Bridge IP address</label>
+      <input class="text" id="ip" placeholder="192.168.1.50" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="user">Application key (username)</label>
+      <input class="text" id="user" placeholder="from the bridge link-button step" autocomplete="off">
+    </div>
+    <div class="toggle-row">
+      <button class="btn primary" id="connect" type="button">Connect</button>
+      <button class="btn" id="demo" type="button">Use demo mode</button>
+    </div>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+    <p class="hint">Settings are saved in this browser only. Browsers may block direct calls to the bridge
+      (CORS, or HTTPS certificate issues on newer bridges); if so, the page falls back to demo mode and reports the error.</p>
+  </section>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- Config & persistence (per-browser convenience only) ----------
+  const STORE_KEY = "hue-picker-config";
+  const loadConfig = () => {
+    try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
+  };
+  const saveConfig = (cfg) => {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); } catch { /* storage unavailable */ }
+  };
+
+  // ---------- State ----------
+  const state = {
+    mode: "demo",          // "demo" | "bridge"
+    ip: "",
+    user: "",
+    lights: [],            // { id, name, type, on, hue, sat, bri, color }
+    selected: new Set(),   // ids; empty = all
+    h: 30,                 // 0-360
+    s: 0.0,                // 0-1
+    v: 1.0,                // 0-1 (brightness)
+    dirty: false,
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const statusEl = $("status");
+  const setStatus = (msg, isError = false) => {
+    statusEl.textContent = msg;
+    statusEl.classList.toggle("error", !!isError);
+  };
+
+  // ---------- Color math ----------
+  // Hue API ranges: hue 0-65535, sat 0-254, bri 1-254.
+  function hsvToRgb(h, s, v) {
+    const c = v * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = v - c;
+    let r = 0, g = 0, b = 0;
+    if (h < 60)       [r, g, b] = [c, x, 0];
+    else if (h < 120) [r, g, b] = [x, c, 0];
+    else if (h < 180) [r, g, b] = [0, c, x];
+    else if (h < 240) [r, g, b] = [0, x, c];
+    else if (h < 300) [r, g, b] = [x, 0, c];
+    else              [r, g, b] = [c, 0, x];
+    return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+  }
+  const rgbCss = (rgb) => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+  const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+
+  function toHueState(h, s, v) {
+    return {
+      on: true,
+      hue: Math.round((((h % 360) + 360) % 360) / 360 * 65535),
+      sat: Math.round(clamp(s, 0, 1) * 254),
+      bri: Math.max(1, Math.round(clamp(v, 0, 1) * 254)),
+    };
+  }
+
+  // ---------- Color wheel ----------
+  const canvas = $("wheel");
+  const ctx = canvas.getContext("2d");
+  const R = canvas.width / 2;
+
+  function drawWheel() {
+    const img = ctx.createImageData(canvas.width, canvas.height);
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        const dx = x - R + 0.5, dy = y - R + 0.5;
+        const dist = Math.hypot(dx, dy) / R;
+        const i = (y * canvas.width + x) * 4;
+        if (dist > 1) { img.data[i + 3] = 0; continue; }
+        let ang = Math.atan2(dy, dx) * 180 / Math.PI;
+        if (ang < 0) ang += 360;
+        const [r, g, b] = hsvToRgb(ang, dist, 1);
+        img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = b; img.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  function drawMarker() {
+    // Redraw the wheel only once; markers are drawn in CSS via overlay to keep it cheap.
+    markerEl.style.left = `${(R + Math.cos(state.h * Math.PI / 180) * state.s * R) / canvas.width * 100}%`;
+    markerEl.style.top  = `${(R + Math.sin(state.h * Math.PI / 180) * state.s * R) / canvas.height * 100}%`;
+    markerEl.style.background = rgbCss(hsvToRgb(state.h, state.s, 1));
+  }
+
+  const markerEl = document.createElement("div");
+  Object.assign(markerEl.style, {
+    position: "absolute", width: "22px", height: "22px", borderRadius: "50%",
+    border: "3px solid #fff", boxShadow: "0 0 0 1px rgba(0,0,0,.4)",
+    transform: "translate(-50%, -50%)", pointerEvents: "none",
+  });
+  canvas.parentElement.appendChild(markerEl); // .wheel-box is position: relative
+
+  function pickFromPointer(ev) {
+    const rect = canvas.getBoundingClientRect();
+    const x = (ev.clientX - rect.left) / rect.width * canvas.width - R;
+    const y = (ev.clientY - rect.top) / rect.height * canvas.height - R;
+    const dist = Math.min(1, Math.hypot(x, y) / R);
+    let ang = Math.atan2(y, x) * 180 / Math.PI;
+    if (ang < 0) ang += 360;
+    state.h = ang;
+    state.s = dist;
+    update({ send: true });
+  }
+
+  let dragging = false;
+  canvas.addEventListener("pointerdown", (e) => {
+    dragging = true; canvas.setPointerCapture(e.pointerId); pickFromPointer(e);
+  });
+  canvas.addEventListener("pointermove", (e) => { if (dragging) pickFromPointer(e); });
+  canvas.addEventListener("pointerup", () => { dragging = false; });
+  canvas.addEventListener("pointercancel", () => { dragging = false; });
+
+  // ---------- Dimmer & power ----------
+  const bri = $("bri");
+  bri.addEventListener("input", () => {
+    state.v = Number(bri.value) / 100;
+    update({ send: true });
+  });
+  $("power-off").addEventListener("click", () => sendRaw({ on: false }));
+  $("power-on").addEventListener("click", () => {
+    update({ send: true, forceOn: true });
+  });
+
+  // ---------- Presets ----------
+  const PRESETS = [
+    [0, 1, "Red"], [25, 1, "Orange"], [50, 0.9, "Amber"], [60, 0.9, "Yellow"],
+    [120, 1, "Green"], [170, 1, "Teal"], [210, 1, "Sky"], [240, 1, "Blue"],
+    [275, 0.9, "Violet"], [320, 0.9, "Pink"], [0, 0, "Warm white"], [0, 0, "Cool white"],
+  ];
+  const presetsEl = $("presets");
+  PRESETS.forEach(([h, s, label]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "preset";
+    b.title = label;
+    b.setAttribute("aria-label", label);
+    b.style.background = rgbCss(hsvToRgb(h, s, 1));
+    if (label === "Warm white") b.style.background = "rgb(255, 214, 170)";
+    if (label === "Cool white") b.style.background = "rgb(220, 235, 255)";
+    b.addEventListener("click", () => {
+      state.h = h; state.s = s;
+      update({ send: true });
+    });
+    presetsEl.appendChild(b);
+  });
+
+  // ---------- Lights list ----------
+  const lightsEl = $("lights");
+  function renderLights() {
+    lightsEl.innerHTML = "";
+    if (!state.lights.length) {
+      const p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = "No lights yet. Connect a bridge, or use demo mode.";
+      lightsEl.appendChild(p);
+      return;
+    }
+    state.lights.forEach((l) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "light";
+      btn.setAttribute("aria-pressed", String(state.selected.has(l.id)));
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = l.on ? rgbCss(hsvToRgb(l.h, l.s, Math.max(0.2, l.v))) : "transparent";
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = l.name;
+      const meta = document.createElement("span");
+      meta.className = "meta";
+      meta.textContent = `${l.on ? "On" : "Off"} · ${Math.round(l.v * 100)}%${l.color ? "" : " · no color"}`;
+      btn.append(dot, name, meta);
+      btn.addEventListener("click", () => {
+        state.selected.has(l.id) ? state.selected.delete(l.id) : state.selected.add(l.id);
+        renderLights();
+      });
+      lightsEl.appendChild(btn);
+    });
+  }
+
+  // ---------- Targets & sending ----------
+  function targets() {
+    return state.lights.filter((l) => state.selected.size === 0 || state.selected.has(l.id));
+  }
+
+  // Throttle network writes so dragging doesn't flood the bridge.
+  let pending = null, timer = null;
+  function queueSend(body, targetIds) {
+    pending = { body, targetIds: [...targetIds] };
+    if (timer) return;
+    timer = setTimeout(flush, 120);
+  }
+  async function flush() {
+    timer = null;
+    if (!pending) return;
+    const { body, targetIds } = pending;
+    pending = null;
+    if (state.mode === "demo") {
+      targetIds.forEach((id) => applyLocal(id, body));
+      renderLights();
+      return;
+    }
+    const results = await Promise.allSettled(targetIds.map((id) => putState(id, body)));
+    const failed = results.filter((r) => r.status === "rejected");
+    if (failed.length) {
+      setStatus(`Bridge error on ${failed.length} light(s): ${failed[0].reason.message}`, true);
+    } else {
+      setStatus(`Sent to ${targetIds.length} light(s).`);
+    }
+  }
+
+  async function putState(id, body) {
+    const url = `http://${state.ip}/api/${encodeURIComponent(state.user)}/lights/${id}/state`;
+    const res = await fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const errs = json.filter((x) => x.error).map((x) => x.error.description);
+    if (errs.length) throw new Error(errs.join("; "));
+  }
+
+  function applyLocal(id, body) {
+    const l = state.lights.find((x) => x.id === id);
+    if (!l) return;
+    if ("on" in body) l.on = body.on;
+    if ("hue" in body) { l.h = body.hue / 65535 * 360; }
+    if ("sat" in body) { l.s = body.sat / 254; }
+    if ("bri" in body) { l.v = body.bri / 254; }
+    if (body.on) l.on = true;
+    if ("hue" in body) l.color = true;
+  }
+
+  function sendRaw(body) {
+    queueSend(body, targets().map((l) => l.id));
+    // Reflect local state immediately for UI.
+    targets().forEach((l) => { if ("on" in body) l.on = body.on; });
+    renderLights();
+  }
+
+  // Central update: recompute preview, optionally send.
+  function update({ send = false, forceOn = false } = {}) {
+    const rgb = hsvToRgb(state.h, state.s, state.v);
+    $("preview").style.background = rgbCss(rgb);
+    bri.value = Math.round(state.v * 100);
+    $("bri-val").textContent = `${Math.round(state.v * 100)}%`;
+    drawMarker();
+    if (send) {
+      const body = toHueState(state.h, state.s, state.v);
+      if (!forceOn) body.on = body.bri > 0;
+      if (state.selected.size === 0 && state.lights.length === 0) {
+        setStatus("No lights to control yet.");
+      }
+      queueSend(body, targets().map((l) => l.id));
+      targets().forEach((l) => { l.on = true; l.h = state.h; l.s = state.s; l.v = state.v; l.color = true; });
+      renderLights();
+    }
+    state.dirty = false;
+  }
+
+  // ---------- Bridge connection ----------
+  async function connect() {
+    const ip = $("ip").value.trim();
+    const user = $("user").value.trim();
+    if (!ip || !user) { setStatus("Enter the bridge IP and application key.", true); return; }
+    setStatus("Connecting…");
+    try {
+      const res = await fetch(`http://${ip}/api/${encodeURIComponent(user)}/lights`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      // The bridge returns an array containing an error object for rejected requests (e.g. bad key).
+      if (Array.isArray(data)) throw new Error(data[0]?.error?.description || "Bridge rejected the request");
+      state.lights = Object.entries(data).map(([id, l]) => {
+        const st = l.state || {};
+        return {
+          id, name: l.name, type: l.type, on: !!st.on,
+          h: (st.hue ?? 0) / 65535 * 360, s: (st.sat ?? 0) / 254,
+          v: (st.bri ?? 254) / 254, color: "hue" in st,
+        };
+      });
+      state.mode = "bridge";
+      state.ip = ip; state.user = user;
+      saveConfig({ ip, user });
+      $("mode-label").textContent = `Connected to bridge at ${ip}.`;
+      setStatus(`Loaded ${state.lights.length} light(s).`);
+      state.selected.clear();
+      renderLights();
+    } catch (err) {
+      setStatus(`Could not reach the bridge (${err.message}). Staying in demo mode.`, true);
+      enterDemo();
+    }
+  }
+
+  function enterDemo() {
+    state.mode = "demo";
+    $("mode-label").textContent = "Demo mode: no bridge connected, changes are simulated locally.";
+    state.lights = [
+      { id: "demo-1", name: "Living room", on: true, h: 30, s: 0.6, v: 0.9, color: true },
+      { id: "demo-2", name: "Desk lamp", on: true, h: 210, s: 0.8, v: 0.7, color: true },
+      { id: "demo-3", name: "Hallway (white)", on: false, h: 0, s: 0, v: 0.5, color: false },
+    ];
+    state.selected.clear();
+    renderLights();
+  }
+
+  $("connect").addEventListener("click", connect);
+  $("demo").addEventListener("click", () => { enterDemo(); setStatus("Demo mode."); });
+
+  // ---------- Init ----------
+  const cfg = loadConfig();
+  if (cfg.ip) $("ip").value = cfg.ip;
+  if (cfg.user) $("user").value = cfg.user;
+  drawWheel();
+  enterDemo();
+  update({ send: false });
+  setStatus("Pick a color or dim a light. Demo mode is active.");
+})();
+</script>
+</body>
+</html>
