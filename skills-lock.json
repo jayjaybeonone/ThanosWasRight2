@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "skills": {
+    "aip": {
+      "source": "opus-pro/ai-producer-plugin",
+      "sourceType": "github",
+      "skillPath": "plugins/aip/skills/aip/SKILL.md",
+      "computedHash": "bb799a764946f1ac01f3a8ac54f5311ce56b9e48d2e6d3b3063efbb9de638a48"
+    },
+    "aip-composition": {
+      "source": "opus-pro/ai-producer-plugin",
+      "sourceType": "github",
+      "skillPath": "plugins/aip/skills/aip-composition/SKILL.md",
+      "computedHash": "dd302e239006e48c1e88ec00c928425a1bfae507e25b2a6ce7898f65c78bed96"
+    },
+    "aip-dynamic-caption": {
+      "source": "opus-pro/ai-producer-plugin",
+      "sourceType": "github",
+      "skillPath": "plugins/aip/skills/aip-dynamic-caption/SKILL.md",
+      "computedHash": "aeec59ebb929edf15c5bb1220ed4bf555bfe59dd32a6188f21c57a3f2f711df1"
+    },
+    "aip-framing": {
+      "source": "opus-pro/ai-producer-plugin",
+      "sourceType": "github",
+      "skillPath": "plugins/aip/skills/aip-framing/SKILL.md",
+      "computedHash": "7e3c65d6fd247c6c30d4ec969f5eff7b0e78d0227be6e13cbb2a6a310ce1663c"
+    },
+    "aip-reference-style": {
+      "source": "opus-pro/ai-producer-plugin",
+      "sourceType": "github",
+      "skillPath": "plugins/aip/skills/aip-reference-style/SKILL.md",
+      "computedHash": "514aa51da05c6b95369a47252cf3374ced5c02b70fb0507e1e20c7037059f126"
+    },
+    "aip-setup": {
+      "source": "opus-pro/ai-producer-plugin",
+      "sourceType": "github",
+      "skillPath": "plugins/aip/skills/aip-setup/SKILL.md",
+      "computedHash": "81ce50cfc8abd49f32f3b474896fa6087bc9f1b6b1134ceb1833a727ded4b85f"
+    }
+  }
+}
